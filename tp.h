@@ -26,7 +26,13 @@ struct IteradorListaDoble {
     ~IteradorListaDoble();
     bool avanzar();
     bool retroceder();
-    bool escribir(char caracter);
-    char* leer();
-
+    bool insertar_siguiente(char caracter);
+    void escribir(char caracter);
+    void leer(char *);
 }
+
+struct InterpreteBrainFuck {
+    InterpreteBrainFuck();
+    ~InterpreteBrainFuck();
+    procesar_script(const char *rutaScript);
+};
