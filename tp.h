@@ -7,12 +7,11 @@ using namespace std;
 
 struct Nodo {
     public:
-    char *caracter;
+    char caracter;
     Nodo *anterior; //struct Nodo
     Nodo *siguiente; //struct Nodo
 
     Nodo();
-    //Nodo(const Nodo &otroNodo);
     ~Nodo();
 };
 
@@ -22,6 +21,7 @@ struct ListaDoble {
     
     ListaDoble();
     //ListaDoble(const ListaDoble &otraLista);
+    void imprimir();
     ~ListaDoble();
     void insertar_primero(char caracter);
 };
@@ -93,7 +93,13 @@ struct InterpreteBF {
     ostream *salida; 
     ListaDoble *listaBF;
     IteradorListaDoble *iteradorBF;
-
+    
+    /*
+    istream &entrada; 
+    ostream &salida; 
+    ListaDoble &listaBF;
+    IteradorListaDoble &iteradorBF;
+    */
     /*
     Inicializa un interprete de BrainFuck.
     PRE: Recibe una referencia al fichero (ya abierto) 
@@ -103,6 +109,7 @@ struct InterpreteBF {
     POST: inicializa el interprete.
     */
     InterpreteBF(istream &entrada, ostream &salida);
+    InterpreteBF();
     /*
     Destruye el interprete de BrainFuck.
     */

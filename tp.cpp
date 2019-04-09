@@ -9,25 +9,16 @@ using namespace std;
 Inicializa un nodo de lista doblemente enlazada.
 */
 Nodo::Nodo() {
-    this->caracter = new char[1]();
+    this->caracter = '\0';
     this->anterior = NULL;
     this->siguiente = NULL;
 }
 
 /*
-Nodo::Nodo(const Nodo &otroNodo) {
-    this->caracter = new char[1]();
-    this->caracter = otroNodo.caracter;
-    this->anterior = otroNodo.anterior;
-    this->siguiente = otroNodo.siguiente;
-}
-*/
-
-/*
 Destruye el nodo de lista doblemente enlazada.
 */
 Nodo::~Nodo() {
-    delete[] this->caracter;
+    // No hace nada
 }
 
 /*
@@ -41,6 +32,19 @@ ListaDoble::ListaDoble(const ListaDoble &otraLista) {
     this->primero = otraLista.primero;
 }
 */
+
+void ListaDoble::imprimir() {
+    Nodo* actual = this->primero;
+    Nodo* siguiente = NULL;
+    while (actual != NULL) {
+        siguiente = actual->siguiente;
+        char caracter = actual->caracter;
+        cout << caracter << '/';
+        actual = siguiente;
+    }
+    cout << '\n';
+}
+
 /*
 Destruye la lista doblemente enlazada.
 */
@@ -63,7 +67,7 @@ contrario.
 */
 void ListaDoble::insertar_primero(char caracter) {
     Nodo *nuevoNodo = new Nodo();
-    *(nuevoNodo->caracter) = caracter;
+    nuevoNodo->caracter = caracter;
     nuevoNodo->siguiente = this->primero;
     nuevoNodo->anterior = NULL;
     this->primero = nuevoNodo;
@@ -129,7 +133,7 @@ nuevo caracter insertado.
 */
 bool IteradorListaDoble::insertar_siguiente(char caracter) {
     Nodo *nuevoNodo = new Nodo();
-    *(nuevoNodo->caracter) = caracter;
+    nuevoNodo->caracter = caracter;
     Nodo *siguiente = this->actual->siguiente;
     nuevoNodo->siguiente = siguiente;
     if (siguiente) {
@@ -147,7 +151,7 @@ POST: Reemplaza el caracter en la posicion actual del
 iterador y por el recibido. 
 */
 void IteradorListaDoble::escribir(char caracter) {
-    *(this->actual->caracter) = caracter;
+    this->actual->caracter = caracter;
 }
 
 /*
@@ -158,7 +162,7 @@ POST: Guarda en la posicion de memoria recibida
 el caracter leido.
 */
 void IteradorListaDoble::leer(char *caracter) {
-    *caracter = *(this->actual->caracter);
+    *caracter = this->actual->caracter;
 }
 
 /*
@@ -198,7 +202,8 @@ encontro dicho caracter en esas condiciones.
 */
 int InterpreteBF::_obtener_final(vector<char> *bloque, int inicio) {
     int i;
-    size_t bloquesIntermedios = 0;
+    int bloquesIntermedios = 0; 
+    //El primer bloque que encuntre sera con el que me quede 
     for (i = inicio; (*bloque)[i]!='\0'; ++i) {
         if ((*bloque)[i] == '[') {
             bloquesIntermedios +=1;
@@ -206,10 +211,11 @@ int InterpreteBF::_obtener_final(vector<char> *bloque, int inicio) {
         if ((*bloque)[i] != ']') {
             continue;
         }
-        if (bloquesIntermedios > 0) {
+        // Entonces es ]
+        if (bloquesIntermedios > 1) {
             bloquesIntermedios -= 1;
             continue;
-        }
+        } 
         break;
     }
     if ((*bloque)[i] == 0) {
@@ -243,10 +249,12 @@ bool InterpreteBF::procesar_bloque(vector<char> *bloque, int inicio, int final) 
                     return false;
                 }
                 bool seProceso;
-                seProceso = procesar_bloque(bloque, i, subFinal);
+                seProceso = procesar_bloque(bloque, i+1, subFinal);
                 if (!seProceso) {
                     return false;
                 }
+                i = subFinal;
+                continue;
             }
             bool seInterpreto = this->interpretar(caracterBloque); 
             if (!seInterpreto) {
@@ -265,7 +273,8 @@ que no corresponda a otro '[' en el medio.
 Devuelve el bloque de caracteres que va desde
 el actual caracter del archivo, hasta ']', 
 sin incluirlo, siendo el proximo caracter a leer
-el siguiente a ']'.
+el siguiente a ']'. 
+El bloque esta terminado en \0.
 Devuelve NULL si no encontro el caracter ']'. 
 Queda a responsabilidad del usuario liberar la 
 memoria reservada.
@@ -302,35 +311,25 @@ vector<char> *InterpreteBF::_obtener_bloque(istream &script) {
         ++i;
         if (i >= largoBloque) {
             size_t nuevoLargo = largoBloque * factorRedimensionar;
-            /*
-            size_t memoriaReservar = sizeof(char)*nuevoLargo;
-            char* nuevoBloque = realloc(bloque, memoriaReservar);
-            */
             (*bloque).resize(nuevoLargo);
             if (bloque == NULL) {
                 delete[] bloque; 
                 return NULL;
             }
-            //bloque = nuevoBloque;
             largoBloque = nuevoLargo; 
         }
     }
-    if (script.eof()) {
+    if (script.eof() && caracter != ']') {
         delete[] bloque;
         return NULL;
     }
     (*bloque)[i] = 0;
     size_t largoFinal = i+1;
-    /*
-    size_t memoriaReservar = sizeof(char)*largoFinal;
-    char *bloqueFinal = realloc(bloque, memoriaReservar);
-    */
     (*bloque).resize(largoFinal);
     if (bloque == NULL) {
         delete[] bloque;
         return NULL;
     }
-    //bloque = bloqueFinal;
     largoBloque = largoFinal;
     return bloque;
 }
@@ -343,10 +342,10 @@ en curso.
 */
 void InterpreteBF::sumar(int sumando) {
     char caracterActual;
-    this->iteradorBF->leer(&caracterActual);
+    (*this->iteradorBF).leer(&caracterActual);
     int valorACSII = int(caracterActual);
     //sumamos 1 y lo volvermos a convertir en char
-    valorACSII = (valorACSII + sumando) % 255; 
+    valorACSII = (valorACSII + sumando) % 256;  
     // cantidad de caracteres ACSII
     caracterActual = valorACSII; //Esperomos que funcione
     this->iteradorBF->escribir(caracterActual);
@@ -372,7 +371,11 @@ la memoria de datos del mismo.
 */
 void InterpreteBF::leer() {
     char caracterLeido;
-    (*this->entrada).get(caracterLeido);
+    if ((*this->entrada)) { //!(*this->entrada).eof
+        (*this->entrada).get(caracterLeido);
+    } else {
+        caracterLeido = '\0';
+    }
     (*this->iteradorBF).escribir(caracterLeido);  
 }
 
@@ -464,6 +467,11 @@ bool InterpreteBF::procesar_script(string rutaScript) {
     return !hayErrorDeIntepretacion;
 } // Aqui se deberia de destruir todo.
 
+/*
+Pre: Recibe un el nombre de un fichero (string)
+Post: Devuelve true, si el fichero recibido es 
+un script de BrainFuck, false en caso contrario.
+*/
 bool es_script_bf(string nombreFichero) {
     int largoNombre = nombreFichero.size();
     string terminacionScriptBF (".bf");
@@ -485,9 +493,8 @@ int main(int argc, const char* argv[]) {
     if (argc != 3) {
         return 2;
     }
-    //const char *modo = argv[1];
+
     string modo (argv[1]);
-    //const char *script = argv[2];
     string script (argv[2]);
 
     if (modo.compare("interprete") == 0) {
