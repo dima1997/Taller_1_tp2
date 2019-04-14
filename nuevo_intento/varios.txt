@@ -1,0 +1,26 @@
+/*
+Inicializa un interprete de BrainFuck.
+PRE: Recibe una referencia al fichero (ya abierto) 
+desde donde el programa en curso leera informacion;
+y una referencia al fichero (ya abierto), en el que 
+el programa en curso volvacara informacion.
+POST: inicializa el interprete.
+*/
+/*
+InterpreteBF::InterpreteBF(istream &entrada,ostream &salida,vector<char> *script)
+: script(&script), {
+    if (entrada.compare(CIN)==0){
+        this->entrada = cin;
+    } else{
+        (this->entrada).open(entrada); 
+    }
+    if (salida.compare(COUT)==0){
+        this->salida = cout;
+    } else {
+        (this->salida).open(salida);
+    }
+    this->datos = new vector<int>; // mm..
+    this->indice = 0;
+    this->todoOK = true;
+ }
+*/
