@@ -19,6 +19,17 @@ recibido.
 */
 void split(string &cadena, string &sep, vector<string> &cadenaSplit);
 
+/*
+PRE: Recibe una ruta a un archivo (string &).
+POST: Devuelve un vector de caracteres (vector<char>)
+con todos los caracteres del archivo; o NULL si ocurrió
+un error.
+Queda a responsabilidad del usuario liberar la memoria
+reservada.
+*/
+vector<char> *cargar_archivo(string &rutaArchivo);
+
+
 class InterpreteBF {
     private:
     ifstream entrada; 
@@ -315,6 +326,8 @@ class ThreadPool{
 };
 
 class Interpretador{
+    string &rutaScript;
+    public:
     /*
     PRE: Recibe una ruta a un script.bf (string &).
     POST: Inicializa un intepretador.

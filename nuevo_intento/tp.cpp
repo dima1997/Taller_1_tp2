@@ -11,12 +11,6 @@ using namespace std;
 #define CANTIDAD_ACSII 256
 
 /*
-typedef 
-priority_queue<InterpPriori*, vector<InterpPriori*>, IPComparador>
-colaPrioridadInterprete_t;
-*/
-
-/*
 PRE: Recibe una cadena de caracteres (string &), un separador 
 (string &), y un vector de strings (vector<string> &).
 POST: LLena el vector recibido (en sus ultimas posiciones), con
@@ -36,6 +30,30 @@ void split(string &cadena, string &sep, vector<string> &cadenaSplit){
 }
 
 /*
+PRE: Recibe una ruta a un archivo (string &).
+POST: Devuelve un vector de caracteres (vector<char>)
+con todos los caracteres del archivo; o NULL si ocurrió
+un error.
+Queda a responsabilidad del usuario liberar la memoria
+reservada.
+*/
+vector<char> *cargar_archivo(string &rutaArchivo){
+    ifstream archivo;
+    archivo.open(rutaArchivo);
+    if (!archivo.is_open()){
+        return NULL;
+    }
+    vector<char> *texto = new vector<char>();
+    char caracterActual;
+    while (archivo.good()){
+        archivo.get(caracterActual);
+        texto->push_back(caracterActual);
+    }
+    archivo.close();
+    return texto;
+}
+
+/*
 Inicializa un interprete de BrainFuck.
 PRE: Recibe una referencia al fichero (ya abierto) 
 desde donde el programa en curso leera informacion;
@@ -44,10 +62,10 @@ el programa en curso volvacara informacion.
 POST: inicializa el interprete.
 */
 InterpreteBF::InterpreteBF(string etda, string slda,vector<char> *script){
-    (this->entrada).open(etda); //*
-    (this->salida).open(slda); //*
+    (this->entrada).open(etda); 
+    (this->salida).open(slda); 
     this->script = script;
-    this->datos = new vector<int>(1,0); // mm..
+    this->datos = new vector<int>(1,0); 
     this->indice = 0;
     this->todoOK = true;
  }
@@ -56,8 +74,8 @@ InterpreteBF::InterpreteBF(string etda, string slda,vector<char> *script){
 Destruye el interprete de BrainFuck.
 */
 InterpreteBF::~InterpreteBF() {
-    (this->entrada).close(); //*
-    (this->salida).close(); //*
+    (this->entrada).close(); 
+    (this->salida).close(); 
     delete this->datos;
     delete this->script;
 }
@@ -247,11 +265,11 @@ con exito, false en caso contrario.
 bool InterpreteBF::procesar_bloque(size_t inicio, size_t final) {
     bool todoOK = true;
     int datoActual = (*this->datos)[this->indice];
-    while (datoActual != 0 && todoOK) {
+    while ((datoActual != 0) && (todoOK == true)) {
         todoOK = this->procesar_un_ciclo(inicio, final);
         datoActual = (*this->datos)[this->indice];
     }
-    return todoOK;;
+    return todoOK;
 }
 
 /*
@@ -418,20 +436,17 @@ Queda a responsabilidad del usuario liberar la memoria
 reservada por medio de la sentencia delete.
 */
 InterpPriori *ThreadPool::procesar_linea(string &linea){
-    string parentesis1 ("(");
-    size_t posParentesis1 = find(linea, &parentesis1);
-    string parentesis2 (")"); 
-    size_t posParentesis2 = find(linea, &parentesis2);
-    string::npos;
+    size_t posParentesis1 = linea.find("("); 
+    size_t posParentesis2 = linea.find( ")");
     if (posParentesis1 == string::npos || posParentesis2 == string::npos){
-        return false;
+        return NULL;
     }
     string lineaSinParentesis = linea.substr(posParentesis1, posParentesis2);
-    vector<string> lineaSplit(); 
+    vector<string> lineaSplit(0); 
     string separador (", ");
-    split(linea, separador, &lineaSplit); 
+    split(linea, separador, lineaSplit); 
     if (lineaSplit.size() != 5){
-        return false;
+        return NULL;
     }
     size_t prioridad = stoi(lineaSplit[1]);
     string rutaEntrada = lineaSplit[2];
@@ -439,7 +454,7 @@ InterpPriori *ThreadPool::procesar_linea(string &linea){
     string script = lineaSplit[4];
     size_t largoScript = script.size();
     vector<char> *scriptVector = new vector<char>;
-    for (int i = 0; i < largoScript; i++){
+    for (size_t i = 0; i < largoScript; i++){
         (*scriptVector).push_back(script[i]);
     } 
     InterpreteBF *interp; 
@@ -451,13 +466,13 @@ InterpPriori *ThreadPool::procesar_linea(string &linea){
 
 /*Ejecuta el ThreadoPool.*/
 int ThreadPool::ejecutar(){
-    PrioriColaInterpProtegida heapInterpretes();
-    bool sigueEncolando = true;
+    bool colaAbierta = true;
+    PrioriColaInterpProtegida heapInterpretes(colaAbierta);
     std::vector<Thread*> hilos;
-    for (int i = 0; i < this->cantidadHilos; ++i) {
-        hilos.push_back(new HiloBF(&heapInterpretes, &sigueEncolando));
+    for (size_t i = 0; i < this->cantidadHilos; ++i) {
+        hilos.push_back(new HiloBF(heapInterpretes));
     }
-    for (int i = 0; i < this->cantidadHilos; ++i) {
+    for (size_t i = 0; i < this->cantidadHilos; ++i) {
         hilos[i]->start();
     }
     string linea;
@@ -470,8 +485,8 @@ int ThreadPool::ejecutar(){
         }
         heapInterpretes.encolar(interp);
     }
-    sigueEncolando = false;
-    for (int i = 0; i < this->cantidadHilos; ++i) {
+    colaAbierta = false;
+    for (size_t i = 0; i < this->cantidadHilos; ++i) {
         hilos[i]->join();
         delete hilos[i];
     }
@@ -516,17 +531,17 @@ Devuelve:
  2 si hubo algun error en la linea de comandos.
 */
 int Interpretador::ejecutar(){
-    if (!es_script_bf(rutaScript)) {
+    if (!this->es_script_bf()) {
         return 2;
     }
-    vector<char> *script = cargar_archivo(rutaScript);
+    vector<char> *script = cargar_archivo(this->rutaScript);
     if (script == NULL){
-        cout << "Error: no se pudo cargar el script.bf"
+        cout << "Error: no se pudo cargar el script.bf\n";
         return 1; 
     }
     string nulo ("\0");
     InterpreteBF interprete(nulo, nulo, script);
-    return interprete.ejecutar();;
+    return interprete.ejecutar() ? 0 : 1 ;
 }
 
 int main(int argc, const char* argv[]) {
