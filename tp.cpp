@@ -27,6 +27,7 @@ void split(std::string &cad, std::string &sep,
         vSplt.push_back(parteCadena);
         copiaCad.erase(0, pos + sep.size());
     }
+    vSplt.push_back(copiaCad); //Agrego lo que falta
     return;
 }
 
@@ -346,15 +347,24 @@ PRE: Recibe un valor booleano que indique cuando el hilo principal
 ya no va encolar mas elementos.
 POST: Inicializa una cola de interpretes con prioridad protegida.
 */
-PrioriColaInterpProtegida::PrioriColaInterpProtegida(bool &colaAbierta)
-: colaAbierta(colaAbierta){
+PrioriColaInterpProtegida::PrioriColaInterpProtegida(){
     this->heapInterp = new colaPrioridadInterprete_t();
-    this->seEncolo = false;
+    this->colaAbierta = true;
 }
 
 /*Destruye una cola de interpretes con prioridad protegida.*/
 PrioriColaInterpProtegida::~PrioriColaInterpProtegida(){
     delete this->heapInterp;
+}
+
+/*
+Se le notifica a la cola que no se encolaran mas elementos 
+en ella.
+*/
+void PrioriColaInterpProtegida::cerrarCola(){
+    std::unique_lock<std::mutex> lock(this->centinela);
+    this->colaAbierta = false;
+    this->continuar_desencolar.notify_all();
 }
 
 /*
@@ -364,8 +374,7 @@ POST: Encola el interprete recibido en la cola.
 void PrioriColaInterpProtegida::encolar(InterpPriori *interpP){
     std::unique_lock<std::mutex> lock(this->centinela);
     this->heapInterp->push(interpP);
-    this->seEncolo = true;
-    this->seEncolo_variable.notify_one();
+    this->continuar_desencolar.notify_one();
 }
 /*
 PRE: Recibe una referencia a un interprete con prioridad.
@@ -379,9 +388,13 @@ bool PrioriColaInterpProtegida::desencolar(InterpPriori &iPriori){
     if (! this->colaAbierta){
         return false;
     }
-    while (!this->seEncolo){
-        this->seEncolo_variable.wait(lock);
+    while (this->heapInterp->empty()){
+        this->continuar_desencolar.wait(lock);
+        if (! this->colaAbierta){
+            return false;
+        }
     }
+
     InterpPriori *iPrioriActual = this->heapInterp->top();
     (*iPrioriActual).moverSemanticamenteA(iPriori);
     delete iPrioriActual; 
@@ -392,6 +405,7 @@ bool PrioriColaInterpProtegida::desencolar(InterpPriori &iPriori){
 
 /*Devuelve true si la cola esta vacia, false en caso contrario.*/
 bool PrioriColaInterpProtegida::estaVacia(){
+    std::unique_lock<std::mutex> lock(this->centinela);
     return this->heapInterp->empty();
 }
 
@@ -409,7 +423,7 @@ HiloBF::~HiloBF(){}
 
 /*Ejecuta el hilo.*/
 void HiloBF::run(){
-    while (!this->heapInterp.estaVacia()){
+    while (true){ 
         InterpPriori iPriori(0, NULL);
         if (this->heapInterp.desencolar(iPriori)){
             iPriori.ejecutar();
@@ -445,7 +459,7 @@ InterpPriori *ThreadPool::procesar_linea(std::string &linea){
     std::string lineaSinParentesis = linea.substr(posParent1, posParent2);
     std::vector<std::string> lineaSplit(0); 
     std::string separador(", ");
-    split(linea, separador, lineaSplit); 
+    split(lineaSinParentesis, separador, lineaSplit); 
     if (lineaSplit.size() != 5){
         return NULL;
     }
@@ -467,8 +481,7 @@ InterpPriori *ThreadPool::procesar_linea(std::string &linea){
 
 /*Ejecuta el ThreadoPool.*/
 int ThreadPool::ejecutar(){
-    bool colaAbierta = true;
-    PrioriColaInterpProtegida heapInterpretes(colaAbierta);
+    PrioriColaInterpProtegida heapInterpretes;
     std::vector<Thread*> hilos;
     for (size_t i = 0; i < this->cantidadHilos; ++i) {
         hilos.push_back(new HiloBF(heapInterpretes));
@@ -486,7 +499,7 @@ int ThreadPool::ejecutar(){
         }
         heapInterpretes.encolar(interp);
     }
-    colaAbierta = false;
+    heapInterpretes.cerrarCola();
     for (size_t i = 0; i < this->cantidadHilos; ++i) {
         hilos[i]->join();
         delete hilos[i];
@@ -555,7 +568,7 @@ int main(int argc, const char* argv[]) {
         Interpretador modoInteprete(rutaScript);
         return modoInteprete.ejecutar();
     }
-    if (modo.compare("thread-pool")){
+    if (modo.compare("thread-pool") == 0){
         std::string cantidadHilosCadena(argv[2]);
         size_t cantidadHilos = stoi(cantidadHilosCadena);
         ThreadPool modoThreadPool(cantidadHilos);

@@ -202,10 +202,11 @@ colaPrioridadInterprete_t;
 class PrioriColaInterpProtegida{
     private:
     colaPrioridadInterprete_t *heapInterp;
-    bool &colaAbierta; 
+    //bool &colaAbierta;
+    bool colaAbierta; 
     std::mutex centinela; 
-    bool seEncolo; 
-    std::condition_variable seEncolo_variable; 
+    //bool seEncolo; 
+    std::condition_variable continuar_desencolar; 
 
     public:
     /*
@@ -213,11 +214,18 @@ class PrioriColaInterpProtegida{
     ya no va encolar mas elementos.
     POST: Inicializa una cola de interpretes con prioridad protegida.
     */
-    explicit PrioriColaInterpProtegida(bool &colaAbierta);
-
+    //explicit PrioriColaInterpProtegida(bool &colaAbierta);
+    PrioriColaInterpProtegida();
+    
     /*Destruye una cola de interpretes con prioridad protegida.*/
     ~PrioriColaInterpProtegida();
     
+    /*
+    Se le notifica a la cola que no se encolaran mas elementos 
+    en ella.
+    */
+    void cerrarCola();
+
     /*
     PRE: Recibe un interprete con prioridad (InterpPriori *)
     POST: Encola el interprete recibido en la cola.
