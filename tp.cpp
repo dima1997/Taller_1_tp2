@@ -9,6 +9,8 @@
 #include "tp.h"
 
 #define CANTIDAD_ACSII 256
+#define ENTRADA_SALIDA_ESTANDAR "\0"
+//setbuf(stdout, NULL); //Disable stdout buffer
 
 /*
 PRE: Recibe una cadena de caracteres (string &), un separador 
@@ -27,7 +29,7 @@ void split(std::string &cad, std::string &sep,
         vSplt.push_back(parteCadena);
         copiaCad.erase(0, pos + sep.size());
     }
-    vSplt.push_back(copiaCad); //Agrego lo que falta
+    vSplt.push_back(copiaCad); 
     return;
 }
 
@@ -65,8 +67,12 @@ POST: inicializa el interprete.
 */
 InterpreteBF::InterpreteBF(std::string etda, std::string slda, 
     std::vector<char> *script){
-    (this->entrada).open(etda); 
-    (this->salida).open(slda); 
+    if (etda.compare(ENTRADA_SALIDA_ESTANDAR) != 0){
+        (this->entrada).open(etda); 
+    }
+    if (slda.compare(ENTRADA_SALIDA_ESTANDAR) != 0){
+        (this->salida).open(slda); 
+    }
     this->script = script;
     this->datos = new std::vector<int>(1,0); 
     this->indice = 0;
@@ -102,7 +108,7 @@ void InterpreteBF::escribir() {
     int valorActual = (*this->datos)[this->indice];
     char caracterActual = valorActual % CANTIDAD_ACSII;
     if (this->salida.is_open()){
-        (this->salida).put(caracterActual); //*
+        (this->salida).put(caracterActual);
     } else {
         std::cout.put(caracterActual);
     }
@@ -115,9 +121,9 @@ en curso y lo guarda en la posicion actual, de
 la memoria de datos del mismo.
 */
 void InterpreteBF::leer() {
-    char caracterLeido;
+    char caracterLeido = 0; 
     if (this->entrada.is_open()){
-        (this->entrada).get(caracterLeido); //*
+        (this->entrada).get(caracterLeido); 
     } else {
         std::cin.get(caracterLeido);
     }
@@ -134,7 +140,8 @@ void InterpreteBF::avanzar() {
     size_t proximoIndice = this->indice + 1;
     
     if (largoDatos <= proximoIndice){
-        (*this->datos).push_back(0);
+        int nuevoElemento = 0;
+        (*this->datos).push_back(nuevoElemento);
     }
     this->indice += 1;
 }
@@ -160,8 +167,7 @@ POST: Devuelve true si logro interpretar y ejecutar
 el caracter recibido.
 */
 bool InterpreteBF::interpretar(char caracter) {
-    // faltan considerar todos los posible errores y levantar mensajes
-    if (caracter == '+') {
+    if (caracter == int('+')) {
         this->sumar(1);
         return true;
     } else if (caracter == '-') {
@@ -178,7 +184,7 @@ bool InterpreteBF::interpretar(char caracter) {
     } else if (caracter == '>') {
         this->avanzar();
         return true;
-    } else if (caracter == '\n' or caracter == '\t'){
+    } else if (caracter == '\n' or caracter == '\t' or caracter == ' '){
         // Son caracteres utilizados
         // para hacer del script mas estructurado y 
         // legible. => Los ignoramos.
@@ -221,8 +227,6 @@ int InterpreteBF::_obtener_final_bloque(size_t inicio, size_t fin) {
     return i;
 }
 
-
-
 /*
 PRE: Recibe dos numeros (size_t): inicion y fin.
 POST: Procesar e interpreta una sola vez, un bloque
@@ -239,7 +243,7 @@ bool InterpreteBF::procesar_un_ciclo(size_t inicio, size_t fin){
     size_t i;
     for (i = inicio; i < fin && todoOK; ++i){
         caracterActual = (*this->script)[i];
-        if (caracterActual == '['){
+        if (caracterActual == '['){ 
             int finalBloque = this->_obtener_final_bloque(i, fin);
             if (finalBloque < 0){
                 todoOK = false;
@@ -267,10 +271,11 @@ con exito, false en caso contrario.
 */
 bool InterpreteBF::procesar_bloque(size_t inicio, size_t final) {
     bool todoOK = true;
-    int datoActual = (*this->datos)[this->indice];
+    int datoActual = 0;
+    datoActual = (*this->datos)[this->indice];
     while ((datoActual != 0) && (todoOK == true)) {
         todoOK = this->procesar_un_ciclo(inicio, final);
-        datoActual = (*this->datos)[this->indice];
+        datoActual = (*this->datos)[this->indice]; 
     }
     return todoOK;
 }
@@ -372,8 +377,10 @@ PRE: Recibe un interprete con prioridad (InterpPriori *)
 POST: Encola el interprete recibido en la cola.
 */
 void PrioriColaInterpProtegida::encolar(InterpPriori *interpP){
-    std::unique_lock<std::mutex> lock(this->centinela);
-    this->heapInterp->push(interpP);
+    {
+        std::unique_lock<std::mutex> lock(this->centinela);
+        this->heapInterp->push(interpP);
+    }
     this->continuar_desencolar.notify_one();
 }
 /*
@@ -383,23 +390,19 @@ referencia recibida.
 Devuelve true si se desencolo un interprete, o false si la
 cola esta vacia.
 */
+
 bool PrioriColaInterpProtegida::desencolar(InterpPriori &iPriori){
     std::unique_lock<std::mutex> lock(this->centinela);
-    if (! this->colaAbierta){
+    while (this->heapInterp->empty() && this->colaAbierta){
+        this->continuar_desencolar.wait(lock);
+    }
+    if (this->heapInterp->empty()){
         return false;
     }
-    while (this->heapInterp->empty()){
-        this->continuar_desencolar.wait(lock);
-        if (! this->colaAbierta){
-            return false;
-        }
-    }
-
     InterpPriori *iPrioriActual = this->heapInterp->top();
     (*iPrioriActual).moverSemanticamenteA(iPriori);
-    delete iPrioriActual; 
-    //Veamo si funciona
     this->heapInterp->pop();
+    delete iPrioriActual; 
     return true;
 }
 
@@ -424,7 +427,7 @@ HiloBF::~HiloBF(){}
 /*Ejecuta el hilo.*/
 void HiloBF::run(){
     while (true){ 
-        InterpPriori iPriori(0, NULL);
+        InterpPriori iPriori(0, NULL); 
         if (this->heapInterp.desencolar(iPriori)){
             iPriori.ejecutar();
         } else {
@@ -452,11 +455,10 @@ reservada por medio de la sentencia delete.
 */
 InterpPriori *ThreadPool::procesar_linea(std::string &linea){
     size_t posParent1 = linea.find("("); 
-    size_t posParent2 = linea.find(")");
-    if (posParent1 == std::string::npos || posParent2 == std::string::npos){
+    if (posParent1 == std::string::npos){
         return NULL;
     }
-    std::string lineaSinParentesis = linea.substr(posParent1, posParent2);
+    std::string lineaSinParentesis = linea.substr(posParent1);
     std::vector<std::string> lineaSplit(0); 
     std::string separador(", ");
     split(lineaSinParentesis, separador, lineaSplit); 
@@ -491,10 +493,9 @@ int ThreadPool::ejecutar(){
     }
     std::string linea;
     while (std::cin.good()){  
-        getline(std::cin, linea);
+        getline(std::cin, linea, ')');
         InterpPriori *interp = this->procesar_linea(linea);
         if (interp == NULL){
-            std::cout << "Error: linea no valida\n";
             continue; 
         }
         heapInterpretes.encolar(interp);
@@ -550,10 +551,9 @@ int Interpretador::ejecutar(){
     }
     std::vector<char> *script = cargar_archivo(this->rutaScript);
     if (script == NULL){
-        std::cout << "Error: no se pudo cargar el script.bf\n";
         return 1; 
     }
-    std::string nulo("\0");
+    std::string nulo(ENTRADA_SALIDA_ESTANDAR);
     InterpreteBF interprete(nulo, nulo, script);
     return interprete.ejecutar() ? 0 : 1;
 }

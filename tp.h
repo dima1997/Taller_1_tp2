@@ -239,7 +239,7 @@ class PrioriColaInterpProtegida{
     cola esta vacia.
     */
     bool desencolar(InterpPriori &iPriori);
-
+    //InterpPriori *desencolar();
 
     /*Devuelve true si la cola esta vacia, false en caso contrario.*/
     bool estaVacia();
