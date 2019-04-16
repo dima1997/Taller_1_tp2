@@ -41,12 +41,13 @@ class InterpreteBF {
     public: 
     /*
     Inicializa un interprete de BrainFuck.
-    PRE: Recibe una referencia al fichero (ya abierto) 
-    desde donde el programa en curso leera informacion;
-    una referencia al fichero (ya abierto), en el que 
-    el programa en curso volvacara informacion; y el 
-    script (vector<char>) a intepretar.
-    POST: inicializa el interprete.
+    PRE: Recibe el nombre de un archivo de entrada, y uno
+    de salida (string), y un vector con todos los caracteres
+    de un script.bf a interpretar (vector<char> *), reservado
+    en memoria.
+    POST: Si lo nombre de la entrada y/o salida es una string
+    "\0", entonces se utilizar std::cin/std::cout respectivamente.
+    El inteprete se encarga de liberar la memoria del vector.
     */
     InterpreteBF(std::string etda, std::string slda, std::vector<char> *script);
 
